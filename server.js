@@ -460,11 +460,11 @@ app.get('/download/:id',au,AH(async(req,res)=>{
   if(!d)return res.status(404).send('Document introuvable.');
   const filePath=path.join(FILES_DIR,d.fichier_path);
   if(!fs.existsSync(filePath))return res.status(404).send('Fichier physique manquant.');
-  if(req.query.inline==='1'){
-    res.setHeader('Content-Disposition','inline; filename="'+d.fichier_nom.replace(/"/g,'')+'"');
-  }else{
-    res.setHeader('Content-Disposition','attachment; filename="'+d.fichier_nom.replace(/"/g,'')+'"');
-  }
+  // RFC 5987 : nom ASCII de fallback + version UTF-8 encodée pour les navigateurs modernes
+  const asciiName=d.fichier_nom.replace(/[^\x20-\x7E]/g,'_').replace(/"/g,'');
+  const utf8Name=encodeURIComponent(d.fichier_nom);
+  const disposition=req.query.inline==='1'?'inline':'attachment';
+  res.setHeader('Content-Disposition',`${disposition}; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`);
   res.sendFile(filePath);
 }));
 
