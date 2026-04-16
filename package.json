@@ -1,7 +1,7 @@
 {
   "name": "tiva-library",
   "version": "1.0.0",
-  "description": "TIVA LIBRARY - Bibliothèque documentaire pour le service d'anesthésie",
+  "description": "TIVA LIBRARY - Bibliothèque",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
