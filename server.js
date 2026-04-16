@@ -95,7 +95,7 @@ const PL=(req,title,content)=>{
 app.use(express.urlencoded({extended:true,limit:'5mb'}));
 app.use(express.json({limit:'5mb'}));
 app.use(session({
-  store:new pgSession({pool,tableName:'tl_session',createTableIfMissing:true}),
+  store:new pgSession({pool,tableName:'tl_session',createTableIfMissing:false}),
   secret:process.env.SESSION_SECRET||'tiva-library-dev-secret',
   resave:false,
   saveUninitialized:false,
@@ -172,6 +172,14 @@ function fileIcon(filename){
 // =========================================================================
 
 async function migrate(){
+  // Création manuelle de la table de session (éviter conflit PK 'session_pkey' avec TIVA PRO)
+  await pool.query(`CREATE TABLE IF NOT EXISTS tl_session(
+    sid VARCHAR NOT NULL COLLATE "default",
+    sess JSON NOT NULL,
+    expire TIMESTAMP(6) NOT NULL,
+    CONSTRAINT tl_session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE
+  ) WITH (OIDS=FALSE)`);
+  await pool.query("CREATE INDEX IF NOT EXISTS tl_session_expire_idx ON tl_session (expire)");
   // Table sessions est créée par connect-pg-simple
   await pool.query(`CREATE TABLE IF NOT EXISTS tl_categories(
     id SERIAL PRIMARY KEY,
@@ -262,8 +270,10 @@ async function seed(){
     await migrate();
     await seed();
     console.log('TIVA LIBRARY: migrations OK');
+    app.listen(PORT,()=>console.log(`TIVA LIBRARY listening on :${PORT}`));
   }catch(e){
-    console.error('Migration error:',e);
+    console.error('Startup error:',e);
+    process.exit(1);
   }
 })();
 
@@ -855,4 +865,4 @@ app.use((req,res)=>{
   res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8">${CSS}</head><body><div class="container"><div class="card alert alert-warning"><h2>404 — Page introuvable</h2></div><a href="/" class="btn btn-primary">← Accueil</a></div></body></html>`);
 });
 
-app.listen(PORT,()=>console.log(`TIVA LIBRARY listening on :${PORT}`));
+// Note : app.listen est appelé dans le bloc async après migrations (voir plus haut)
